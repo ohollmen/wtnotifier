@@ -1,0 +1,31 @@
+import wtsys
+import json
+import ldc
+import notimailer
+import sys
+
+def main():
+  debug = 0;
+  typelbl = sys.argv[1] # splice ?
+  if not typelbl: print("Pass system type (e.g. jira|gerrit)"); exit(1)
+  print("Type: " + typelbl);
+  cfg = wtsys.loadconfigs(typelbl)
+  #if debug: print("main-CFG: " + json.dumps(cfg));
+  ss = wtsys.create(cfg)
+  #print(isinstance(ss, wtsys.wtsys), isinstance(ss, wtsys.gerritsys), isinstance(ss, wtsys.jirasys))
+  #ss.settime(age_days=30) # TEST
+  auth = wtsys.getcreds(cfg.get("host"), http=ss.ishttp, envkeys=['GUSER','GPASS'])
+  #auth2 = gerrit_open_notify.getcreds("me", httpx=True, envkeys=['GUSER','GPASS']) # TEST
+  #print(json.dumps(auth)); # Will NOT dump http=True
+  if not auth: print("Credentials could not be turned into runtime auth"); exit(1);
+  srcents = ss.apisearch(auth=auth)
+  print("Got "+str(len(srcents))+" ents.");
+  #print(json.dumps(srcents, indent=2)); exit(0)
+  srcents = filter(ss.timefilter, srcents)
+  finalcnt = len(srcents)
+  print("Got "+str(finalcnt)+" ents. after filter.");
+  #print(json.dumps(srcents, indent=2)); exit(0)
+  nm = notimailer.notimailer(cfg);
+  nm.notify(srcents, ss.accts_idx, noemail=1);
+  
+main()
